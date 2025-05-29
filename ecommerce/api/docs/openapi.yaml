@@ -1,0 +1,332 @@
+openapi: 3.0.3
+info:
+  title: Ecommerce API
+  version: 1.0.0
+  description: |
+    RESTful API for ecommerce platform. All endpoints require JWT Bearer authentication unless otherwise noted.
+servers:
+  - url: /ecommerce/ecommerce/api
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Product:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        brand: { type: string }
+        category: { type: string }
+        price: { type: number, format: float }
+        rating: { type: number, format: float }
+        reviews: { type: integer }
+        sizes:
+          type: array
+          items: { type: integer }
+        icon: { type: string }
+    CartItem:
+      type: object
+      properties:
+        id: { type: integer }
+        product_id: { type: integer }
+        product_name: { type: string }
+        price: { type: number, format: float }
+        quantity: { type: integer }
+        total: { type: number, format: float }
+    Order:
+      type: object
+      properties:
+        id: { type: integer }
+        user_id: { type: integer }
+        full_name: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        address: { type: string }
+        city: { type: string }
+        zip_code: { type: string }
+        payment_method: { type: string }
+        total_amount: { type: number, format: float }
+        order_status: { type: string }
+        created_at: { type: string, format: date-time }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              product_name: { type: string }
+              price: { type: number, format: float }
+              quantity: { type: integer }
+              total: { type: number, format: float }
+    AuthResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        token: { type: string }
+        userId: { type: integer }
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        error: { type: string }
+    PaymentResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        payment_status: { type: string }
+        transaction_id: { type: string }
+security:
+  - bearerAuth: []
+paths:
+  /products.php:
+    get:
+      summary: Get all products or a single product by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: id
+          schema:
+            type: integer
+          description: Product ID to fetch a single product
+      responses:
+        '200':
+          description: List of products or single product
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  - $ref: '#/components/schemas/Product'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /cart.php:
+    get:
+      summary: Get cart items
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of cart items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CartItem'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Add item to cart
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                product_id: { type: integer }
+                quantity: { type: integer }
+      responses:
+        '200':
+          description: Product added to cart
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Remove item from cart
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cart_item_id: { type: integer }
+      responses:
+        '200':
+          description: Item removed from cart
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /order.php:
+    get:
+      summary: Get orders
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: id
+          schema:
+            type: integer
+          description: Order ID to fetch a single order
+      responses:
+        '200':
+          description: List of orders or single order
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  - $ref: '#/components/schemas/Order'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Create a new order
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cart:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      product_id: { type: integer }
+                      quantity: { type: integer }
+                shipping:
+                  type: object
+                  properties:
+                    full_name: { type: string }
+                    email: { type: string }
+                    phone: { type: string }
+                    address: { type: string }
+                    city: { type: string }
+                    zip_code: { type: string }
+                payment_method: { type: string }
+      responses:
+        '200':
+          description: Order placed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  order_id: { type: integer }
+                  message: { type: string }
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /payment.php:
+    post:
+      summary: Process payment (mock)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order_id: { type: integer }
+                payment_method: { type: string }
+                payment_details:
+                  type: object
+                  properties:
+                    card_number: { type: string }
+                    expiry: { type: string }
+                    cvv: { type: string }
+      responses:
+        '200':
+          description: Payment processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth.php:
+    post:
+      summary: User registration or login
+      parameters:
+        - in: query
+          name: action
+          schema:
+            type: string
+          required: true
+          description: 'register or login'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    name: { type: string }
+                    email: { type: string }
+                    password: { type: string }
+                - type: object
+                  properties:
+                    email: { type: string }
+                    password: { type: string }
+      responses:
+        '200':
+          description: Auth response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
